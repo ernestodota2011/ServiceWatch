@@ -1,14 +1,19 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Service, ServiceStatus } from "@/types";
+import { Service, ServiceStatus, ServiceDocument } from "@/types";
 import { toast } from "sonner";
+import { connectToMongoDB } from "./mongodb";
+import { ObjectId } from "mongodb";
 
 interface ServiceState {
   services: Service[];
-  addService: (service: Omit<Service, "id" | "status" | "lastChecked">) => void;
-  updateService: (id: string, service: Partial<Service>) => void;
-  deleteService: (id: string) => void;
+  isLoading: boolean;
+  error: string | null;
+  loadServices: () => Promise<void>;
+  addService: (service: Omit<Service, "id" | "status" | "lastChecked">) => Promise<void>;
+  updateService: (id: string, service: Partial<Service>) => Promise<void>;
+  deleteService: (id: string) => Promise<void>;
   checkServiceStatus: (id: string) => Promise<void>;
   checkAllServicesStatus: () => Promise<void>;
 }
@@ -166,6 +171,18 @@ const initialServices: Service[] = [
 // Helper function to generate a random ID
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
+// Helper function to convert MongoDB document to Service type
+const documentToService = (doc: ServiceDocument): Service => ({
+  id: doc._id,
+  name: doc.name,
+  description: doc.description,
+  status: doc.status,
+  mainUrl: doc.mainUrl,
+  apiUrl: doc.apiUrl,
+  webhookUrl: doc.webhookUrl,
+  lastChecked: doc.lastChecked,
+});
+
 // Simulates a fetch to check service status
 const checkStatus = async (url: string): Promise<ServiceStatus> => {
   // In a real application, this would make an actual HTTP request
@@ -184,27 +201,101 @@ const checkStatus = async (url: string): Promise<ServiceStatus> => {
   });
 };
 
-export const useServiceStore = create<ServiceState>()(
-  persist(
-    (set, get) => ({
-      services: initialServices,
+export const useServiceStore = create<ServiceState>()((set, get) => ({
+  services: [],
+  isLoading: false,
+  error: null,
+  
+  loadServices: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const db = await connectToMongoDB();
+      const collection = db.collection('services');
       
-      addService: (service) => {
-        const newService: Service = {
-          ...service,
-          id: generateId(),
-          status: "online", // Default status for new services
-          lastChecked: new Date(),
+      // Check if we have services in MongoDB
+      const count = await collection.countDocuments();
+      
+      if (count === 0) {
+        // Seed the database with initial services
+        await collection.insertMany(
+          initialServices.map(service => ({
+            ...service,
+            _id: service.id,
+            status: service.status as ServiceStatus
+          }))
+        );
+        
+        // Fetch the services we just inserted
+        const services = await collection.find({}).toArray();
+        set({ 
+          services: services.map(documentToService),
+          isLoading: false 
+        });
+      } else {
+        // Fetch existing services
+        const services = await collection.find({}).toArray();
+        set({ 
+          services: services.map(documentToService),
+          isLoading: false 
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load services:", error);
+      set({ 
+        error: "Failed to load services. Using local data instead.",
+        services: initialServices,
+        isLoading: false 
+      });
+      toast.error("Failed to load services from database. Using local data.");
+    }
+  },
+  
+  addService: async (service) => {
+    try {
+      const db = await connectToMongoDB();
+      const collection = db.collection('services');
+      
+      const newService: Omit<ServiceDocument, '_id'> = {
+        name: service.name,
+        description: service.description,
+        status: "online" as ServiceStatus,
+        mainUrl: service.mainUrl,
+        apiUrl: service.apiUrl,
+        webhookUrl: service.webhookUrl,
+        lastChecked: new Date(),
+      };
+      
+      const result = await collection.insertOne(newService as any);
+      
+      if (result.acknowledged) {
+        const insertedService: Service = {
+          id: result.insertedId.toString(),
+          ...newService,
         };
         
         set((state) => ({
-          services: [...state.services, newService],
+          services: [...state.services, insertedService],
         }));
         
         toast.success(`${service.name} added successfully`);
-      },
+      }
+    } catch (error) {
+      console.error("Failed to add service:", error);
+      toast.error("Failed to add service to database");
+    }
+  },
+  
+  updateService: async (id, updatedService) => {
+    try {
+      const db = await connectToMongoDB();
+      const collection = db.collection('services');
       
-      updateService: (id, updatedService) => {
+      const result = await collection.updateOne(
+        { _id: id },
+        { $set: updatedService }
+      );
+      
+      if (result.matchedCount > 0) {
         set((state) => ({
           services: state.services.map((service) =>
             service.id === id ? { ...service, ...updatedService } : service
@@ -212,67 +303,148 @@ export const useServiceStore = create<ServiceState>()(
         }));
         
         toast.success("Service updated successfully");
-      },
+      } else {
+        toast.error("Service not found");
+      }
+    } catch (error) {
+      console.error("Failed to update service:", error);
+      toast.error("Failed to update service in database");
+    }
+  },
+  
+  deleteService: async (id) => {
+    try {
+      const db = await connectToMongoDB();
+      const collection = db.collection('services');
       
-      deleteService: (id) => {
+      const result = await collection.deleteOne({ _id: id });
+      
+      if (result.deletedCount > 0) {
         set((state) => ({
           services: state.services.filter((service) => service.id !== id),
         }));
         
         toast.success("Service deleted successfully");
-      },
-      
-      checkServiceStatus: async (id) => {
-        const service = get().services.find((s) => s.id === id);
-        if (!service) return;
-        
-        try {
-          const status = await checkStatus(service.mainUrl);
-          set((state) => ({
-            services: state.services.map((s) =>
-              s.id === id
-                ? { ...s, status, lastChecked: new Date() }
-                : s
-            ),
-          }));
-        } catch (error) {
-          set((state) => ({
-            services: state.services.map((s) =>
-              s.id === id
-                ? { ...s, status: "error", lastChecked: new Date() }
-                : s
-            ),
-          }));
-        }
-      },
-      
-      checkAllServicesStatus: async () => {
-        const { services } = get();
-        const checkPromises = services.map(async (service) => {
-          try {
-            const status = await checkStatus(service.mainUrl);
-            return {
-              ...service,
-              status,
-              lastChecked: new Date(),
-            };
-          } catch (error) {
-            return {
-              ...service,
-              status: "error",
-              lastChecked: new Date(),
-            };
-          }
-        });
-        
-        const updatedServices = await Promise.all(checkPromises);
-        set({ services: updatedServices });
-        
-        toast.success("All services checked");
-      },
-    }),
-    {
-      name: "service-store",
+      } else {
+        toast.error("Service not found");
+      }
+    } catch (error) {
+      console.error("Failed to delete service:", error);
+      toast.error("Failed to delete service from database");
     }
-  )
-);
+  },
+  
+  checkServiceStatus: async (id) => {
+    const service = get().services.find((s) => s.id === id);
+    if (!service) return;
+    
+    try {
+      const status = await checkStatus(service.mainUrl);
+      
+      // Update in MongoDB
+      const db = await connectToMongoDB();
+      const collection = db.collection('services');
+      
+      await collection.updateOne(
+        { _id: id },
+        { 
+          $set: { 
+            status: status,
+            lastChecked: new Date() 
+          } 
+        }
+      );
+      
+      // Update in local state
+      set((state) => ({
+        services: state.services.map((s) =>
+          s.id === id
+            ? { ...s, status, lastChecked: new Date() }
+            : s
+        ),
+      }));
+    } catch (error) {
+      console.error("Failed to check service status:", error);
+      
+      const errorStatus: ServiceStatus = "error";
+      
+      // Update in MongoDB
+      try {
+        const db = await connectToMongoDB();
+        const collection = db.collection('services');
+        
+        await collection.updateOne(
+          { _id: id },
+          { 
+            $set: { 
+              status: errorStatus,
+              lastChecked: new Date() 
+            } 
+          }
+        );
+      } catch (dbError) {
+        console.error("Failed to update status in database:", dbError);
+      }
+      
+      // Update in local state
+      set((state) => ({
+        services: state.services.map((s) =>
+          s.id === id
+            ? { ...s, status: errorStatus, lastChecked: new Date() }
+            : s
+        ),
+      }));
+    }
+  },
+  
+  checkAllServicesStatus: async () => {
+    const { services } = get();
+    
+    const checkPromises = services.map(async (service) => {
+      try {
+        const status = await checkStatus(service.mainUrl);
+        return {
+          ...service,
+          status,
+          lastChecked: new Date(),
+        };
+      } catch (error) {
+        return {
+          ...service,
+          status: "error" as ServiceStatus,
+          lastChecked: new Date(),
+        };
+      }
+    });
+    
+    const updatedServices = await Promise.all(checkPromises);
+    
+    // Update in MongoDB
+    try {
+      const db = await connectToMongoDB();
+      const collection = db.collection('services');
+      
+      // We'll use a transaction for this in the future for atomicity
+      const updatePromises = updatedServices.map(service => 
+        collection.updateOne(
+          { _id: service.id },
+          { 
+            $set: { 
+              status: service.status,
+              lastChecked: service.lastChecked 
+            } 
+          }
+        )
+      );
+      
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error("Failed to update services in database:", error);
+      toast.error("Failed to update services in database");
+    }
+    
+    // Update local state
+    set({ services: updatedServices });
+    toast.success("All services checked");
+  },
+}));

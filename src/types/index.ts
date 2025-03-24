@@ -22,3 +22,12 @@ export interface APIKey {
 export interface ThemeConfig {
   theme: "light" | "dark" | "system";
 }
+
+// MongoDB Document types
+export interface ServiceDocument extends Omit<Service, 'id'> {
+  _id: string;
+}
+
+export interface APIKeyDocument extends Omit<APIKey, 'id'> {
+  _id: string;
+}

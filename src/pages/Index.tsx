@@ -8,23 +8,30 @@ import { useServiceStore } from "@/lib/serviceStore";
 import { Service, ServiceStatus } from "@/types";
 
 const Index = () => {
-  const { services, checkAllServicesStatus } = useServiceStore();
+  const { services, loadServices, checkAllServicesStatus, isLoading, error } = useServiceStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ServiceStatus[]>(["online", "offline", "error"]);
   const [addServiceOpen, setAddServiceOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   
-  // Check all services on initial load
+  // Load services from MongoDB on initial render
   useEffect(() => {
-    checkAllServicesStatus();
-    
-    // Set up interval to check services every 5 minutes
-    const interval = setInterval(() => {
+    loadServices();
+  }, [loadServices]);
+  
+  // Check all services on initial load and set up interval
+  useEffect(() => {
+    if (services.length > 0) {
       checkAllServicesStatus();
-    }, 5 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, [checkAllServicesStatus]);
+      
+      // Set up interval to check services every 5 minutes
+      const interval = setInterval(() => {
+        checkAllServicesStatus();
+      }, 5 * 60 * 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [services.length, checkAllServicesStatus]);
   
   const handleAddService = () => {
     setEditingService(null);
@@ -61,7 +68,17 @@ const Index = () => {
           />
         </div>
         
-        {filteredServices.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <h2 className="text-xl font-medium mb-2">Loading services...</h2>
+            <p className="text-muted-foreground">Please wait while we connect to the database.</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 text-destructive">
+            <h2 className="text-xl font-medium mb-2">Error loading services</h2>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+        ) : filteredServices.length === 0 ? (
           <div className="text-center py-12">
             <h2 className="text-xl font-medium mb-2">No services found</h2>
             <p className="text-muted-foreground">

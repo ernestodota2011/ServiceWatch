@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { APIKey } from "@/types";
 import { useApiKeyStore } from "@/lib/apiKeyStore";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Trash2 } from "lucide-react";
+import { Copy, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 
@@ -17,19 +17,34 @@ interface APIKeyModalProps {
 }
 
 export function APIKeyModal({ open, onOpenChange }: APIKeyModalProps) {
-  const { apiKeys, addApiKey, deleteApiKey } = useApiKeyStore();
+  const { apiKeys, loadApiKeys, addApiKey, deleteApiKey, isLoading, error } = useApiKeyStore();
   const [newKeyName, setNewKeyName] = useState("");
   const [newKey, setNewKey] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleCreateKey = () => {
+  // Load API keys when modal is opened
+  useEffect(() => {
+    if (open) {
+      loadApiKeys();
+    }
+  }, [open, loadApiKeys]);
+
+  const handleCreateKey = async () => {
     if (!newKeyName.trim()) {
       toast.error("Please enter a key name");
       return;
     }
 
-    const key = addApiKey(newKeyName);
-    setNewKey(key);
-    setNewKeyName("");
+    setIsGenerating(true);
+    try {
+      const key = await addApiKey(newKeyName);
+      if (key) {
+        setNewKey(key);
+        setNewKeyName("");
+      }
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleCopyKey = (key: string) => {
@@ -37,8 +52,8 @@ export function APIKeyModal({ open, onOpenChange }: APIKeyModalProps) {
     toast.success("API key copied to clipboard");
   };
 
-  const handleDeleteKey = (id: string) => {
-    deleteApiKey(id);
+  const handleDeleteKey = async (id: string) => {
+    await deleteApiKey(id);
   };
 
   return (
@@ -94,12 +109,31 @@ export function APIKeyModal({ open, onOpenChange }: APIKeyModalProps) {
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}
                 className="flex-1"
+                disabled={isGenerating}
               />
-              <Button onClick={handleCreateKey}>Generate</Button>
+              <Button onClick={handleCreateKey} disabled={isGenerating}>
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  "Generate"
+                )}
+              </Button>
             </div>
           </div>
 
-          {apiKeys.length > 0 && (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" />
+              <span>Loading API keys...</span>
+            </div>
+          ) : error ? (
+            <div className="text-center py-4 text-destructive">
+              <p>{error}</p>
+            </div>
+          ) : apiKeys.length > 0 ? (
             <>
               <Separator className="my-4" />
               <div className="space-y-2">
@@ -134,7 +168,7 @@ export function APIKeyModal({ open, onOpenChange }: APIKeyModalProps) {
                 </div>
               </div>
             </>
-          )}
+          ) : null}
         </div>
 
         <DialogFooter>
