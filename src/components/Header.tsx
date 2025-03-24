@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
-import { Plus, Settings, RefreshCw } from "lucide-react";
+import { Plus, Settings, RefreshCw, Activity } from "lucide-react";
 import { useServiceStore } from "@/lib/serviceStore";
 import { SettingsModal } from "./SettingsModal";
 
@@ -26,7 +26,12 @@ export function Header({ onAddService }: HeaderProps) {
       <header className="sticky top-0 z-30 glass-card shadow-sm backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between py-4">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-xl">ServiceWatch</span>
+            <div className="flex items-center text-primary">
+              <Activity className="h-6 w-6 mr-2 stroke-primary" />
+              <h1 className="font-bold text-2xl tracking-tight bg-gradient-to-r from-primary to-primary-foreground bg-clip-text text-transparent">
+                ServiceWatch
+              </h1>
+            </div>
           </div>
           
           <div className="flex items-center gap-2">

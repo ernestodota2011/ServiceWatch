@@ -101,15 +101,15 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
     }
   };
 
-  const cardClasses = `glass-card animate-fade-in overflow-hidden group transition-all duration-300 hover:shadow-lg ${isFavorite ? 'border-amber-400 dark:border-amber-500' : ''} ${isMobile ? 'cursor-pointer active:scale-95' : ''}`;
+  const cardClasses = `glass-card animate-fade-in overflow-hidden group transition-all duration-300 hover:shadow-lg ${isFavorite ? 'border-amber-400 dark:border-amber-500' : ''} cursor-pointer active:scale-95`;
   
   return (
-    <Card className={cardClasses} onClick={isMobile ? handleCardClick : undefined}>
+    <Card className={cardClasses} onClick={handleCardClick}>
       <CardHeader className="relative pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className={`status-indicator status-indicator-${status}`} />
-            <CardTitle className="text-lg font-medium">{name}</CardTitle>
+            <CardTitle className="text-lg font-medium hover:text-primary">{name}</CardTitle>
             {isFavorite && (
               <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
             )}
