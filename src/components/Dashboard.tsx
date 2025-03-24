@@ -71,6 +71,33 @@ export function Dashboard({ services }: DashboardProps) {
     return colors[category];
   }
 
+  // Custom render function for pie chart labels to avoid overlap
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
+    if (statusData.length <= 1) return null;
+    
+    // Only show label for slices with significant percentage
+    if (percent < 0.1) return null;
+    
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor="middle" 
+        dominantBaseline="central"
+        fontSize={12}
+        fontWeight="bold"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
+
   return (
     <Card className="glass-card p-6">
       <h2 className="text-2xl font-bold mb-4">Dashboard</h2>
@@ -135,27 +162,31 @@ export function Dashboard({ services }: DashboardProps) {
           </div>
 
           {totalServices > 0 && (
-            <div className="mt-6 h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie 
-                    data={statusData} 
-                    cx="50%" 
-                    cy="50%" 
-                    innerRadius={60}
-                    outerRadius={80} 
-                    fill="#8884d8" 
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="mt-6 h-[300px] flex flex-col">
+              <h3 className="text-sm font-medium text-center mb-2">Service Status Distribution</h3>
+              <div className="flex-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie 
+                      data={statusData} 
+                      cx="50%" 
+                      cy="50%" 
+                      innerRadius={60}
+                      outerRadius={80} 
+                      fill="#8884d8" 
+                      dataKey="value"
+                      labelLine={false}
+                      label={renderCustomizedLabel}
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} services`, 'Count']} />
+                    <Legend verticalAlign="bottom" height={36} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
         </TabsContent>
@@ -182,27 +213,31 @@ export function Dashboard({ services }: DashboardProps) {
           </div>
 
           {totalServices > 0 && (
-            <div className="mt-6 h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie 
-                    data={categoryData} 
-                    cx="50%" 
-                    cy="50%" 
-                    innerRadius={60}
-                    outerRadius={80} 
-                    fill="#8884d8" 
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="mt-6 h-[300px] flex flex-col">
+              <h3 className="text-sm font-medium text-center mb-2">Service Distribution by Category</h3>
+              <div className="flex-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie 
+                      data={categoryData} 
+                      cx="50%" 
+                      cy="50%" 
+                      innerRadius={60}
+                      outerRadius={80} 
+                      fill="#8884d8" 
+                      dataKey="value"
+                      labelLine={false}
+                      label={renderCustomizedLabel}
+                    >
+                      {categoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} services`, 'Count']} />
+                    <Legend verticalAlign="bottom" height={36} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
         </TabsContent>
