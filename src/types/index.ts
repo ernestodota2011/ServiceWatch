@@ -23,11 +23,5 @@ export interface ThemeConfig {
   theme: "light" | "dark" | "system";
 }
 
-// MongoDB Document types
-export interface ServiceDocument extends Omit<Service, 'id'> {
-  _id: string;
-}
-
-export interface APIKeyDocument extends Omit<APIKey, 'id'> {
-  _id: string;
-}
+// These types are no longer needed since we're using a mock implementation
+// We're removing them to simplify our code

@@ -1,10 +1,8 @@
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { APIKey, APIKeyDocument } from "@/types";
+import { APIKey } from "@/types";
 import { toast } from "sonner";
 import { connectToMongoDB } from "./mongodb";
-import { ObjectId } from "mongodb";
 
 interface ApiKeyState {
   apiKeys: APIKey[];
@@ -29,14 +27,6 @@ const generateApiKey = () => {
   return key;
 };
 
-// Helper function to convert MongoDB document to APIKey type
-const documentToApiKey = (doc: APIKeyDocument): APIKey => ({
-  id: doc._id,
-  name: doc.name,
-  key: doc.key,
-  createdAt: doc.createdAt,
-});
-
 export const useApiKeyStore = create<ApiKeyState>()((set, get) => ({
   apiKeys: [],
   isLoading: false,
@@ -50,8 +40,14 @@ export const useApiKeyStore = create<ApiKeyState>()((set, get) => ({
       
       // Fetch existing API keys
       const apiKeys = await collection.find({}).toArray();
+      
       set({ 
-        apiKeys: apiKeys.map(documentToApiKey),
+        apiKeys: apiKeys.map(doc => ({
+          id: doc._id,
+          name: doc.name,
+          key: doc.key,
+          createdAt: doc.createdAt,
+        })),
         isLoading: false 
       });
     } catch (error) {
@@ -72,13 +68,13 @@ export const useApiKeyStore = create<ApiKeyState>()((set, get) => ({
       const db = await connectToMongoDB();
       const collection = db.collection('apikeys');
       
-      const newApiKey: Omit<APIKeyDocument, '_id'> = {
+      const newApiKey = {
         name,
         key,
         createdAt: new Date(),
       };
       
-      const result = await collection.insertOne(newApiKey as any);
+      const result = await collection.insertOne(newApiKey);
       
       if (result.acknowledged) {
         const insertedApiKey: APIKey = {

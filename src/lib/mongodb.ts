@@ -1,40 +1,114 @@
 
-import { MongoClient, ServerApiVersion, Db } from 'mongodb';
 import { toast } from "sonner";
+import { Service, APIKey } from "@/types";
 
-// Connection URL
-const uri = "mongodb://ernestodota2011:01a6ca8ce2223fe4b16c373ddd234172@5.189.151.27:27017/?authSource=admin&readPreference=primary&ssl=false&directConnection=true";
+// Mock database collections
+let servicesCollection: any[] = [];
+let apiKeysCollection: any[] = [];
 
-// Create a MongoClient
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
+// Mock MongoDB database interface
+class MockDb {
+  collection(name: string) {
+    if (name === 'services') {
+      return getMockCollection(servicesCollection);
+    } else if (name === 'apikeys') {
+      return getMockCollection(apiKeysCollection);
+    }
+    return getMockCollection([]);
   }
-});
+}
 
-let db: Db | null = null;
+// Create a mock MongoDB collection with basic methods
+function getMockCollection(data: any[]) {
+  return {
+    find: () => ({
+      toArray: async () => data
+    }),
+    findOne: async (query: any) => {
+      const id = query._id;
+      return data.find(item => item._id === id);
+    },
+    insertOne: async (doc: any) => {
+      if (!doc._id) {
+        doc._id = generateId();
+      }
+      data.push(doc);
+      return {
+        acknowledged: true,
+        insertedId: doc._id
+      };
+    },
+    insertMany: async (docs: any[]) => {
+      docs.forEach(doc => {
+        if (!doc._id) {
+          doc._id = generateId();
+        }
+        data.push(doc);
+      });
+      return {
+        acknowledged: true,
+        insertedCount: docs.length
+      };
+    },
+    updateOne: async (query: any, update: any) => {
+      const id = query._id;
+      const index = data.findIndex(item => item._id === id);
+      if (index !== -1) {
+        // Apply $set update operator
+        if (update.$set) {
+          data[index] = { ...data[index], ...update.$set };
+        }
+        return {
+          acknowledged: true,
+          matchedCount: 1,
+          modifiedCount: 1
+        };
+      }
+      return {
+        acknowledged: true,
+        matchedCount: 0,
+        modifiedCount: 0
+      };
+    },
+    deleteOne: async (query: any) => {
+      const id = query._id;
+      const initialLength = data.length;
+      const filteredData = data.filter(item => item._id !== id);
+      data.length = 0;
+      data.push(...filteredData);
+      return {
+        acknowledged: true,
+        deletedCount: initialLength - data.length
+      };
+    },
+    countDocuments: async () => data.length
+  };
+}
+
+// Mock database instance
+let mockDb: MockDb | null = null;
+
+// Helper function to generate IDs
+function generateId() {
+  return Math.random().toString(36).substring(2, 9);
+}
 
 /**
- * Connect to MongoDB and return the database instance
- * @returns Promise<Db>
+ * Connect to mock MongoDB and return the database instance
+ * @returns Promise<MockDb>
  */
-export async function connectToMongoDB(): Promise<Db> {
+export async function connectToMongoDB(): Promise<MockDb> {
   try {
     // If we already have a connection, return it
-    if (db) return db;
+    if (mockDb) return mockDb;
     
-    // Connect to the MongoDB server
-    await client.connect();
+    // Create a new mock database instance
+    mockDb = new MockDb();
     
-    // Get a reference to the database
-    db = client.db("servicewatch");
-    
-    console.log("Connected to MongoDB successfully");
-    return db;
+    console.log("Connected to Mock MongoDB successfully");
+    return mockDb;
   } catch (error) {
-    console.error("Failed to connect to MongoDB:", error);
+    console.error("Failed to connect to Mock MongoDB:", error);
     toast.error("Failed to connect to the database");
     throw error;
   }
@@ -45,13 +119,10 @@ export async function connectToMongoDB(): Promise<Db> {
  */
 export async function closeMongoDB() {
   try {
-    if (client) {
-      await client.close();
-      db = null;
-      console.log("MongoDB connection closed");
-    }
+    mockDb = null;
+    console.log("Mock MongoDB connection closed");
   } catch (error) {
-    console.error("Error closing MongoDB connection:", error);
+    console.error("Error closing Mock MongoDB connection:", error);
   }
 }
 
@@ -60,4 +131,3 @@ process.on('SIGINT', async () => {
   await closeMongoDB();
   process.exit(0);
 });
-

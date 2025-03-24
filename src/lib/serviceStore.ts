@@ -1,10 +1,7 @@
-
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { Service, ServiceStatus, ServiceDocument } from "@/types";
+import { Service, ServiceStatus } from "@/types";
 import { toast } from "sonner";
 import { connectToMongoDB } from "./mongodb";
-import { ObjectId } from "mongodb";
 
 interface ServiceState {
   services: Service[];
@@ -168,21 +165,6 @@ const initialServices: Service[] = [
   },
 ];
 
-// Helper function to generate a random ID
-const generateId = () => Math.random().toString(36).substring(2, 9);
-
-// Helper function to convert MongoDB document to Service type
-const documentToService = (doc: ServiceDocument): Service => ({
-  id: doc._id,
-  name: doc.name,
-  description: doc.description,
-  status: doc.status,
-  mainUrl: doc.mainUrl,
-  apiUrl: doc.apiUrl,
-  webhookUrl: doc.webhookUrl,
-  lastChecked: doc.lastChecked,
-});
-
 // Simulates a fetch to check service status
 const checkStatus = async (url: string): Promise<ServiceStatus> => {
   // In a real application, this would make an actual HTTP request
@@ -216,26 +198,50 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
       const count = await collection.countDocuments();
       
       if (count === 0) {
+        // Prepare services for insertion by removing 'id' field and using '_id' instead
+        const servicesToInsert = initialServices.map(service => ({
+          _id: service.id,
+          name: service.name,
+          description: service.description,
+          status: service.status,
+          mainUrl: service.mainUrl,
+          apiUrl: service.apiUrl,
+          webhookUrl: service.webhookUrl,
+          lastChecked: service.lastChecked,
+        }));
+        
         // Seed the database with initial services
-        await collection.insertMany(
-          initialServices.map(service => ({
-            ...service,
-            _id: service.id,
-            status: service.status as ServiceStatus
-          }))
-        );
+        await collection.insertMany(servicesToInsert);
         
         // Fetch the services we just inserted
         const services = await collection.find({}).toArray();
         set({ 
-          services: services.map(documentToService),
+          services: services.map(doc => ({
+            id: doc._id,
+            name: doc.name,
+            description: doc.description,
+            status: doc.status,
+            mainUrl: doc.mainUrl,
+            apiUrl: doc.apiUrl,
+            webhookUrl: doc.webhookUrl,
+            lastChecked: doc.lastChecked,
+          })),
           isLoading: false 
         });
       } else {
         // Fetch existing services
         const services = await collection.find({}).toArray();
         set({ 
-          services: services.map(documentToService),
+          services: services.map(doc => ({
+            id: doc._id,
+            name: doc.name,
+            description: doc.description,
+            status: doc.status,
+            mainUrl: doc.mainUrl,
+            apiUrl: doc.apiUrl,
+            webhookUrl: doc.webhookUrl,
+            lastChecked: doc.lastChecked,
+          })),
           isLoading: false 
         });
       }
@@ -255,7 +261,7 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
       const db = await connectToMongoDB();
       const collection = db.collection('services');
       
-      const newService: Omit<ServiceDocument, '_id'> = {
+      const newService = {
         name: service.name,
         description: service.description,
         status: "online" as ServiceStatus,
@@ -265,7 +271,7 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
         lastChecked: new Date(),
       };
       
-      const result = await collection.insertOne(newService as any);
+      const result = await collection.insertOne(newService);
       
       if (result.acknowledged) {
         const insertedService: Service = {
@@ -447,4 +453,5 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
     set({ services: updatedServices });
     toast.success("All services checked");
   },
-}));
+}
+
