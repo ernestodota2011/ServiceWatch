@@ -1,5 +1,6 @@
 
 export type ServiceStatus = "online" | "offline" | "error";
+export type ServiceCategory = "infrastructure" | "api" | "frontend" | "backend" | "database" | "monitoring" | "other";
 
 export interface Service {
   id: string;
@@ -10,6 +11,12 @@ export interface Service {
   apiUrl?: string;
   webhookUrl?: string;
   lastChecked?: Date;
+  category?: ServiceCategory;
+  isFavorite?: boolean;
+  statusHistory?: Array<{
+    status: ServiceStatus;
+    timestamp: Date;
+  }>;
 }
 
 export interface APIKey {
@@ -23,5 +30,3 @@ export interface ThemeConfig {
   theme: "light" | "dark" | "system";
 }
 
-// These types are no longer needed since we're using a mock implementation
-// We're removing them to simplify our code

@@ -1,6 +1,6 @@
 
 import { create } from "zustand";
-import { Service, ServiceStatus } from "@/types";
+import { Service, ServiceStatus, ServiceCategory } from "@/types";
 import { toast } from "sonner";
 import { connectToMongoDB } from "./mongodb";
 
@@ -9,11 +9,12 @@ interface ServiceState {
   isLoading: boolean;
   error: string | null;
   loadServices: () => Promise<void>;
-  addService: (service: Omit<Service, "id" | "status" | "lastChecked">) => Promise<void>;
+  addService: (service: Omit<Service, "id" | "status" | "lastChecked" | "isFavorite" | "statusHistory">) => Promise<void>;
   updateService: (id: string, service: Partial<Service>) => Promise<void>;
   deleteService: (id: string) => Promise<void>;
   checkServiceStatus: (id: string) => Promise<void>;
   checkAllServicesStatus: () => Promise<void>;
+  toggleFavorite: (id: string) => Promise<void>;
 }
 
 const initialServices: Service[] = [
@@ -23,6 +24,8 @@ const initialServices: Service[] = [
     description: "Customer Relationship Management System",
     status: "online",
     mainUrl: "https://woofedcrm.aetherlogik.com",
+    category: "frontend",
+    isFavorite: true,
     lastChecked: new Date(),
   },
   {
@@ -31,6 +34,7 @@ const initialServices: Service[] = [
     description: "Fast and reliable web performance tool",
     status: "online",
     mainUrl: "https://bolt.aetherlogik.com",
+    category: "monitoring",
     lastChecked: new Date(),
   },
   {
@@ -39,6 +43,7 @@ const initialServices: Service[] = [
     description: "URL shortener service",
     status: "online",
     mainUrl: "https://yourls.aetherlogik.com/admin",
+    category: "frontend",
     lastChecked: new Date(),
   },
   {
@@ -47,6 +52,8 @@ const initialServices: Service[] = [
     description: "Document signing platform",
     status: "online",
     mainUrl: "https://docuseal.aetherlogik.com",
+    category: "frontend",
+    isFavorite: true,
     lastChecked: new Date(),
   },
   {
@@ -55,6 +62,7 @@ const initialServices: Service[] = [
     description: "Scheduling and calendar management",
     status: "online",
     mainUrl: "https://cal.aetherlogik.com",
+    category: "frontend",
     lastChecked: new Date(),
   },
   {
@@ -64,6 +72,7 @@ const initialServices: Service[] = [
     status: "online",
     mainUrl: "https://evoapi.aetherlogik.com/manager",
     apiUrl: "https://evoapi.aetherlogik.com",
+    category: "api",
     lastChecked: new Date(),
   },
   {
@@ -72,6 +81,7 @@ const initialServices: Service[] = [
     description: "Conversational AI platform",
     status: "online",
     mainUrl: "https://botpress.aetherlogik.com",
+    category: "frontend",
     lastChecked: new Date(),
   },
   {
@@ -80,6 +90,7 @@ const initialServices: Service[] = [
     description: "AI development platform",
     status: "online",
     mainUrl: "https://dify.aetherlogik.com",
+    category: "frontend",
     lastChecked: new Date(),
   },
   {
@@ -88,6 +99,7 @@ const initialServices: Service[] = [
     description: "Workflow automation tool",
     status: "online",
     mainUrl: "https://flowise.aetherlogik.com",
+    category: "backend",
     lastChecked: new Date(),
   },
   {
@@ -96,6 +108,7 @@ const initialServices: Service[] = [
     description: "Chatbot builder platform",
     status: "online",
     mainUrl: "https://builder.aetherlogik.com",
+    category: "frontend",
     lastChecked: new Date(),
   },
   {
@@ -104,6 +117,7 @@ const initialServices: Service[] = [
     description: "Customer engagement platform",
     status: "online",
     mainUrl: "https://chatwoot.aetherlogik.com",
+    category: "frontend",
     lastChecked: new Date(),
   },
   {
@@ -112,6 +126,7 @@ const initialServices: Service[] = [
     description: "No-code database platform",
     status: "online",
     mainUrl: "https://nocodb.aetherlogik.com",
+    category: "database",
     lastChecked: new Date(),
   },
   {
@@ -121,6 +136,7 @@ const initialServices: Service[] = [
     status: "online",
     mainUrl: "https://miniofront.aetherlogik.com",
     apiUrl: "https://minioback.aetherlogik.com",
+    category: "infrastructure",
     lastChecked: new Date(),
   },
   {
@@ -129,6 +145,7 @@ const initialServices: Service[] = [
     description: "Message broker service",
     status: "online",
     mainUrl: "https://rabbitmq.aetherlogik.com",
+    category: "infrastructure",
     lastChecked: new Date(),
   },
   {
@@ -137,6 +154,7 @@ const initialServices: Service[] = [
     description: "Vector database for similarity search",
     status: "online",
     mainUrl: "http://qdrant.aetherlogik.com:6333/dashboard",
+    category: "database",
     lastChecked: new Date(),
   },
   {
@@ -145,6 +163,8 @@ const initialServices: Service[] = [
     description: "Analytics and monitoring platform",
     status: "online",
     mainUrl: "https://grafana.aetherlogik.com",
+    category: "monitoring",
+    isFavorite: true,
     lastChecked: new Date(),
   },
   {
@@ -154,6 +174,7 @@ const initialServices: Service[] = [
     status: "online",
     mainUrl: "https://n8n.aetherlogik.com",
     webhookUrl: "https://webhook.aetherlogik.com",
+    category: "backend",
     lastChecked: new Date(),
   },
   {
@@ -162,6 +183,7 @@ const initialServices: Service[] = [
     description: "Container management platform",
     status: "online",
     mainUrl: "https://portainer.aetherlogik.com",
+    category: "infrastructure",
     lastChecked: new Date(),
   },
 ];
@@ -203,7 +225,10 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
           mainUrl: service.mainUrl,
           apiUrl: service.apiUrl,
           webhookUrl: service.webhookUrl,
+          category: service.category,
+          isFavorite: service.isFavorite || false,
           lastChecked: service.lastChecked,
+          statusHistory: service.statusHistory || [],
         }));
         
         await collection.insertMany(servicesToInsert);
@@ -218,7 +243,10 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
             mainUrl: doc.mainUrl,
             apiUrl: doc.apiUrl,
             webhookUrl: doc.webhookUrl,
+            category: doc.category,
+            isFavorite: doc.isFavorite || false,
             lastChecked: doc.lastChecked,
+            statusHistory: doc.statusHistory || [],
           })),
           isLoading: false 
         });
@@ -233,7 +261,10 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
             mainUrl: doc.mainUrl,
             apiUrl: doc.apiUrl,
             webhookUrl: doc.webhookUrl,
+            category: doc.category,
+            isFavorite: doc.isFavorite || false,
             lastChecked: doc.lastChecked,
+            statusHistory: doc.statusHistory || [],
           })),
           isLoading: false 
         });
@@ -261,7 +292,10 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
         mainUrl: service.mainUrl,
         apiUrl: service.apiUrl,
         webhookUrl: service.webhookUrl,
+        category: service.category,
+        isFavorite: false,
         lastChecked: new Date(),
+        statusHistory: [],
       };
       
       const result = await collection.insertOne(newService);
@@ -333,12 +367,50 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
     }
   },
   
+  toggleFavorite: async (id) => {
+    const service = get().services.find(s => s.id === id);
+    if (!service) return;
+    
+    const updatedFavorite = !service.isFavorite;
+    
+    try {
+      const db = await connectToMongoDB();
+      const collection = db.collection('services');
+      
+      const result = await collection.updateOne(
+        { _id: id },
+        { $set: { isFavorite: updatedFavorite } }
+      );
+      
+      if (result.matchedCount > 0) {
+        set((state) => ({
+          services: state.services.map((s) => 
+            s.id === id ? { ...s, isFavorite: updatedFavorite } : s
+          ),
+        }));
+        
+        toast.success(`${service.name} ${updatedFavorite ? 'added to' : 'removed from'} favorites`);
+      }
+    } catch (error) {
+      console.error("Failed to update favorite status:", error);
+      toast.error("Failed to update favorite status");
+    }
+  },
+  
   checkServiceStatus: async (id) => {
     const service = get().services.find((s) => s.id === id);
     if (!service) return;
     
     try {
       const status = await checkStatus(service.mainUrl);
+      
+      // Create status history entry
+      const statusHistoryEntry = {
+        status,
+        timestamp: new Date()
+      };
+      
+      const statusHistory = [...(service.statusHistory || []), statusHistoryEntry].slice(-10); // Keep last 10 entries
       
       const db = await connectToMongoDB();
       const collection = db.collection('services');
@@ -348,7 +420,8 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
         { 
           $set: { 
             status: status,
-            lastChecked: new Date() 
+            lastChecked: new Date(),
+            statusHistory
           } 
         }
       );
@@ -356,7 +429,7 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
       set((state) => ({
         services: state.services.map((s) =>
           s.id === id
-            ? { ...s, status, lastChecked: new Date() }
+            ? { ...s, status, lastChecked: new Date(), statusHistory }
             : s
         ),
       }));
@@ -398,10 +471,20 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
     const checkPromises = services.map(async (service) => {
       try {
         const status = await checkStatus(service.mainUrl);
+        
+        // Create status history entry
+        const statusHistoryEntry = {
+          status,
+          timestamp: new Date()
+        };
+        
+        const statusHistory = [...(service.statusHistory || []), statusHistoryEntry].slice(-10);
+        
         return {
           ...service,
           status,
           lastChecked: new Date(),
+          statusHistory
         };
       } catch (error) {
         return {
@@ -424,7 +507,8 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
           { 
             $set: { 
               status: service.status,
-              lastChecked: service.lastChecked 
+              lastChecked: service.lastChecked,
+              statusHistory: service.statusHistory
             } 
           }
         )
