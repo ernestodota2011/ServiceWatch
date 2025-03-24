@@ -4,7 +4,7 @@ import { Service, ServiceStatus } from "@/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ExternalLink, MoreVertical, Edit, Trash2, RefreshCw } from "lucide-react";
+import { ExternalLink, MoreVertical, Edit, Trash2, RefreshCw, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { useServiceStore } from "@/lib/serviceStore";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
@@ -20,10 +20,19 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
   
   const { id, name, description, status, mainUrl, apiUrl, webhookUrl, lastChecked } = service;
   
-  const statusLabel: Record<ServiceStatus, string> = {
-    online: "Online",
-    offline: "Offline",
-    error: "Error",
+  const statusConfig: Record<ServiceStatus, { label: string, icon: React.ReactNode }> = {
+    online: { 
+      label: "Online", 
+      icon: <CheckCircle className="h-3.5 w-3.5 mr-1 text-success" /> 
+    },
+    offline: { 
+      label: "Offline", 
+      icon: <XCircle className="h-3.5 w-3.5 mr-1 text-destructive" /> 
+    },
+    error: { 
+      label: "Error", 
+      icon: <AlertTriangle className="h-3.5 w-3.5 mr-1 text-warning" /> 
+    },
   };
   
   const handleRefresh = async () => {
@@ -84,7 +93,8 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
         </div>
         
         <div className={`status-badge status-badge-${status} mt-1`}>
-          {statusLabel[status]}
+          {statusConfig[status].icon}
+          {statusConfig[status].label}
           {lastChecked && (
             <span className="text-muted-foreground ml-1">
               • Updated {formatDistanceToNow(new Date(lastChecked), { addSuffix: true })}
