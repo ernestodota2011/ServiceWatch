@@ -1,0 +1,23 @@
+version: "3.7"
+
+services:
+  servicewatch_app:
+    image: ernestodota2011/servicewatch:latest
+    build: .
+    # env_file: .env  <-- Puedes comentar o eliminar esta línea
+    networks:
+      - generalnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.servicewatch.rule=Host(`servicewatch.tudominio.com`)"
+      - "traefik.http.routers.servicewatch.entrypoints=websecure"
+      - "traefik.http.routers.servicewatch.tls.certresolver=letsencryptresolver"
+      - "traefik.http.services.servicewatch.loadbalancer.server.port=3000"
+      - "traefik.http.services.servicewatch.loadbalancer.passHostHeader=true"
+    deploy:
+      replicas: 1
+
+networks:
+  generalnet:
+    external: true
+    name: generalnet
