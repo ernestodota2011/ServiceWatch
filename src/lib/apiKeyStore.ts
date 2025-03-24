@@ -39,7 +39,7 @@ export const useApiKeyStore = create<ApiKeyState>()((set, get) => ({
       const collection = db.collection('apikeys');
       
       // Fetch existing API keys
-      const apiKeys = await collection.find({}).toArray();
+      const apiKeys = await collection.find().toArray();
       
       set({ 
         apiKeys: apiKeys.map(doc => ({

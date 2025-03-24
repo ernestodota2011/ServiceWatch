@@ -126,8 +126,7 @@ export async function closeMongoDB() {
   }
 }
 
-// Handle connection errors
-process.on('SIGINT', async () => {
+// Using window event listener instead of process events for browser environment
+window.addEventListener('beforeunload', async () => {
   await closeMongoDB();
-  process.exit(0);
 });

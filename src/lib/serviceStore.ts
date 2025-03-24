@@ -1,3 +1,4 @@
+
 import { create } from "zustand";
 import { Service, ServiceStatus } from "@/types";
 import { toast } from "sonner";
@@ -207,7 +208,7 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
         
         await collection.insertMany(servicesToInsert);
         
-        const services = await collection.find({}).toArray();
+        const services = await collection.find().toArray();
         set({ 
           services: services.map(doc => ({
             id: doc._id,
@@ -222,7 +223,7 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
           isLoading: false 
         });
       } else {
-        const services = await collection.find({}).toArray();
+        const services = await collection.find().toArray();
         set({ 
           services: services.map(doc => ({
             id: doc._id,
