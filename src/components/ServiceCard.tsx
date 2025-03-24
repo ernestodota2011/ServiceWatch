@@ -20,6 +20,7 @@ import { useServiceStore } from "@/lib/serviceStore";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ServiceCardProps {
   service: Service;
@@ -29,6 +30,7 @@ interface ServiceCardProps {
 export function ServiceCard({ service, onEdit }: ServiceCardProps) {
   const { deleteService, checkServiceStatus, toggleFavorite, updateService } = useServiceStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const isMobile = useIsMobile();
   
   const { id, name, description, status, mainUrl, apiUrl, webhookUrl, lastChecked, category, isFavorite } = service;
   
@@ -57,32 +59,52 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
     other: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
   };
   
-  const handleRefresh = async () => {
+  const handleRefresh = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     setIsRefreshing(true);
     await checkServiceStatus(id);
     setIsRefreshing(false);
   };
   
-  const handleDelete = () => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
     deleteService(id);
   };
   
-  const handleCopyUrl = (url: string, type: string) => {
+  const handleCopyUrl = (url: string, type: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     navigator.clipboard.writeText(url);
     toast.success(`${type} URL copied to clipboard`);
   };
 
-  const handleToggleFavorite = () => {
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
     toggleFavorite(id);
   };
 
-  const handleChangeCategory = (newCategory: ServiceCategory) => {
+  const handleChangeCategory = (newCategory: ServiceCategory, e: React.MouseEvent) => {
+    e.stopPropagation();
     updateService(id, { category: newCategory });
     toast.success(`${name} moved to ${newCategory} category`);
   };
   
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit(service);
+  };
+  
+  const handleCardClick = () => {
+    if (mainUrl) {
+      window.open(mainUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const cardClasses = `glass-card animate-fade-in overflow-hidden group transition-all duration-300 hover:shadow-lg ${isFavorite ? 'border-amber-400 dark:border-amber-500' : ''} ${isMobile ? 'cursor-pointer active:scale-95' : ''}`;
+  
   return (
-    <Card className={`glass-card animate-fade-in overflow-hidden group transition-all duration-300 hover:shadow-lg ${isFavorite ? 'border-amber-400 dark:border-amber-500' : ''}`}>
+    <Card className={cardClasses} onClick={isMobile ? handleCardClick : undefined}>
       <CardHeader className="relative pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -107,13 +129,13 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                   <MoreVertical className="h-4 w-4" />
                   <span className="sr-only">More</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(service)}>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem onClick={handleEdit}>
                   <Edit className="mr-2 h-4 w-4" />
                   <span>Edit</span>
                 </DropdownMenuItem>
@@ -132,7 +154,7 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
                 {(['infrastructure', 'api', 'frontend', 'backend', 'database', 'monitoring', 'other'] as ServiceCategory[]).map(cat => (
                   <DropdownMenuItem 
                     key={cat} 
-                    onClick={() => handleChangeCategory(cat)}
+                    onClick={(e) => handleChangeCategory(cat, e)}
                     className="ml-4"
                   >
                     <span className={`w-2 h-2 rounded-full mr-2 ${categoryColors[cat].split(' ')[0]}`}></span>
@@ -184,7 +206,7 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
                 variant="ghost"
                 size="sm"
                 className="h-7 px-2 text-xs"
-                onClick={() => handleCopyUrl(mainUrl, "Main")}
+                onClick={(e) => handleCopyUrl(mainUrl, "Main", e)}
               >
                 Copy
               </Button>
@@ -193,6 +215,7 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
               >
                 <Button variant="outline" size="icon" className="h-7 w-7">
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -209,7 +232,7 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
                   variant="ghost"
                   size="sm"
                   className="h-7 px-2 text-xs"
-                  onClick={() => handleCopyUrl(apiUrl, "API")}
+                  onClick={(e) => handleCopyUrl(apiUrl, "API", e)}
                 >
                   Copy
                 </Button>
@@ -218,6 +241,7 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-primary hover:underline"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <Button variant="outline" size="icon" className="h-7 w-7">
                     <ExternalLink className="h-3.5 w-3.5" />
@@ -235,7 +259,7 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
                   variant="ghost"
                   size="sm"
                   className="h-7 px-2 text-xs"
-                  onClick={() => handleCopyUrl(webhookUrl, "Webhook")}
+                  onClick={(e) => handleCopyUrl(webhookUrl, "Webhook", e)}
                 >
                   Copy
                 </Button>
@@ -244,6 +268,7 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-primary hover:underline"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <Button variant="outline" size="icon" className="h-7 w-7">
                     <ExternalLink className="h-3.5 w-3.5" />
