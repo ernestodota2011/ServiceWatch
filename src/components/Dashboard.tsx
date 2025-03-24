@@ -114,7 +114,7 @@ export function Dashboard({ services }: DashboardProps) {
                 <span className="text-sm font-medium">Online</span>
                 <span className="text-sm text-muted-foreground">{onlinePercentage.toFixed(1)}%</span>
               </div>
-              <Progress value={onlinePercentage} className="h-2 bg-muted" indicatorClassName="bg-success" />
+              <Progress value={onlinePercentage} className="h-2 bg-muted" />
             </div>
 
             <div>
@@ -122,7 +122,7 @@ export function Dashboard({ services }: DashboardProps) {
                 <span className="text-sm font-medium">Offline</span>
                 <span className="text-sm text-muted-foreground">{offlinePercentage.toFixed(1)}%</span>
               </div>
-              <Progress value={offlinePercentage} className="h-2 bg-muted" indicatorClassName="bg-destructive" />
+              <Progress value={offlinePercentage} className="h-2 bg-muted" />
             </div>
 
             <div>
@@ -130,7 +130,7 @@ export function Dashboard({ services }: DashboardProps) {
                 <span className="text-sm font-medium">Error</span>
                 <span className="text-sm text-muted-foreground">{errorPercentage.toFixed(1)}%</span>
               </div>
-              <Progress value={errorPercentage} className="h-2 bg-muted" indicatorClassName="bg-warning" />
+              <Progress value={errorPercentage} className="h-2 bg-muted" />
             </div>
           </div>
 
