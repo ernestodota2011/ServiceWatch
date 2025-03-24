@@ -165,10 +165,7 @@ const initialServices: Service[] = [
   },
 ];
 
-// Simulates a fetch to check service status
 const checkStatus = async (url: string): Promise<ServiceStatus> => {
-  // In a real application, this would make an actual HTTP request
-  // For demo purposes, we're simulating with random statuses
   return new Promise((resolve) => {
     setTimeout(() => {
       const random = Math.random();
@@ -179,7 +176,7 @@ const checkStatus = async (url: string): Promise<ServiceStatus> => {
       } else {
         resolve("online");
       }
-    }, 500 + Math.random() * 1000); // Random delay between 500-1500ms
+    }, 500 + Math.random() * 1000);
   });
 };
 
@@ -194,11 +191,9 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
       const db = await connectToMongoDB();
       const collection = db.collection('services');
       
-      // Check if we have services in MongoDB
       const count = await collection.countDocuments();
       
       if (count === 0) {
-        // Prepare services for insertion by removing 'id' field and using '_id' instead
         const servicesToInsert = initialServices.map(service => ({
           _id: service.id,
           name: service.name,
@@ -210,10 +205,8 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
           lastChecked: service.lastChecked,
         }));
         
-        // Seed the database with initial services
         await collection.insertMany(servicesToInsert);
         
-        // Fetch the services we just inserted
         const services = await collection.find({}).toArray();
         set({ 
           services: services.map(doc => ({
@@ -229,7 +222,6 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
           isLoading: false 
         });
       } else {
-        // Fetch existing services
         const services = await collection.find({}).toArray();
         set({ 
           services: services.map(doc => ({
@@ -347,7 +339,6 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
     try {
       const status = await checkStatus(service.mainUrl);
       
-      // Update in MongoDB
       const db = await connectToMongoDB();
       const collection = db.collection('services');
       
@@ -361,7 +352,6 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
         }
       );
       
-      // Update in local state
       set((state) => ({
         services: state.services.map((s) =>
           s.id === id
@@ -374,7 +364,6 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
       
       const errorStatus: ServiceStatus = "error";
       
-      // Update in MongoDB
       try {
         const db = await connectToMongoDB();
         const collection = db.collection('services');
@@ -392,7 +381,6 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
         console.error("Failed to update status in database:", dbError);
       }
       
-      // Update in local state
       set((state) => ({
         services: state.services.map((s) =>
           s.id === id
@@ -425,12 +413,10 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
     
     const updatedServices = await Promise.all(checkPromises);
     
-    // Update in MongoDB
     try {
       const db = await connectToMongoDB();
       const collection = db.collection('services');
       
-      // We'll use a transaction for this in the future for atomicity
       const updatePromises = updatedServices.map(service => 
         collection.updateOne(
           { _id: service.id },
@@ -449,9 +435,7 @@ export const useServiceStore = create<ServiceState>()((set, get) => ({
       toast.error("Failed to update services in database");
     }
     
-    // Update local state
     set({ services: updatedServices });
     toast.success("All services checked");
   },
-}
-
+}));
