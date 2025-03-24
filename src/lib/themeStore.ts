@@ -1,0 +1,23 @@
+
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { ThemeConfig } from "@/types";
+
+type Theme = ThemeConfig["theme"];
+
+interface ThemeState {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+}
+
+export const useThemeStore = create<ThemeState>()(
+  persist(
+    (set) => ({
+      theme: "system",
+      setTheme: (theme) => set({ theme }),
+    }),
+    {
+      name: "theme-store",
+    }
+  )
+);
