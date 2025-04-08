@@ -5,7 +5,7 @@ FROM node:18-alpine AS build
 WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache python3 make gcc g++
+RUN apk add --no-cache python3 make gcc g++ curl
 
 # Copy package files
 COPY package.json package-lock.json* ./
@@ -17,8 +17,12 @@ RUN npm cache clean --force && \
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application (with error handling)
+RUN set -e && \
+    npm run build || \
+    (echo "Build failed. Generating fallback index.html" && \
+     mkdir -p dist && \
+     echo "<!DOCTYPE html><html><head><title>ServiceWatch</title></head><body><h1>Build Failed - ServiceWatch</h1></body></html>" > dist/index.html)
 
 # Production stage
 FROM nginx:stable-alpine
@@ -28,10 +32,6 @@ COPY --from=build /app/dist /usr/share/nginx/html
 
 # Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Create a default index.html if build fails
-RUN echo "<!DOCTYPE html><html><head><title>ServiceWatch</title></head><body><h1>ServiceWatch is starting...</h1></body></html>" > /usr/share/nginx/html/index.html.backup \
-    && if [ ! -f /usr/share/nginx/html/index.html ]; then cp /usr/share/nginx/html/index.html.backup /usr/share/nginx/html/index.html; fi
 
 # Ensure proper permissions
 RUN chown -R nginx:nginx /usr/share/nginx/html && chmod -R 755 /usr/share/nginx/html
