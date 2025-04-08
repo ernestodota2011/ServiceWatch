@@ -1,11 +1,18 @@
 # Build stage
 FROM node:18-alpine AS build
 
+# Set working directory
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Install build dependencies
+RUN apk add --no-cache python3 make gcc g++
+
+# Copy package files
 COPY package.json package-lock.json* ./
-RUN npm ci
+
+# Clean npm cache and install dependencies
+RUN npm cache clean --force && \
+    npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
