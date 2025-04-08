@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  servicewatch_app:
+    image: ernestodota2011/servicewatch:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-8080}:80"
+    networks:
+      - generalnet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  generalnet:
+    external: true
+    name: generalnet
