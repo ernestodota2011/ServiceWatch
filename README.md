@@ -1,69 +1,104 @@
-# Welcome to your Lovable project
+# ServiceWatch
 
-## Project info
+ServiceWatch is a modern web application for monitoring and managing infrastructure services. It provides an easy-to-use interface to track service status and manage them efficiently.
 
-**URL**: https://lovable.dev/projects/aeb6e67c-8340-4bac-9852-95b748947380
+## Features
 
-## How can I edit this code?
+- Web service monitoring
+- Service management (add, edit, delete)
+- Modern and responsive user interface
+- Search and filtering capabilities
+- Light and dark theme support
+- API key management
 
-There are several ways of editing your application.
+## Technologies
 
-**Use Lovable**
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/aeb6e67c-8340-4bac-9852-95b748947380) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Development
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+1. Clone the repository:
+```bash
+git clone https://github.com/ernestodota2011/ServiceWatch.git
+cd ServiceWatch
 ```
 
-**Edit a file directly in GitHub**
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+# or
+bun install
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+3. Start the development server:
+```bash
+npm run dev
+# or
+yarn dev
+# or
+bun dev
+```
 
-**Use GitHub Codespaces**
+4. Open [http://localhost:5173](http://localhost:5173) in your browser to view the application.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Deployment
 
-## What technologies are used for this project?
+### Using Docker and Portainer
 
-This project is built with .
+This repository includes all the necessary files for deploying with Docker and Portainer:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. **Dockerfile**: Multi-stage build for optimized production image
+2. **docker-compose.yml**: Configuration for deployment with Traefik integration
+3. **nginx.conf**: Optimized Nginx settings for serving the React application
 
-## How can I deploy this project?
+#### Option 1: Deploy using Portainer Stacks
 
-Simply open [Lovable](https://lovable.dev/projects/aeb6e67c-8340-4bac-9852-95b748947380) and click on Share -> Publish.
+1. In Portainer, navigate to **Stacks** and click **Add stack**
+2. Use one of these methods:
+   
+   a. **Git Repository**:
+   - Repository URL: `https://github.com/ernestodota2011/ServiceWatch.git`
+   - Repository Reference: `main`
+   - Compose Path: `docker-compose.yml`
+   
+   b. **Web Editor**:
+   - Copy content from the `docker-compose.yml` file in this repository
+   - Adjust domain and other settings as needed
 
-## I want to use a custom domain - is that possible?
+3. Click **Deploy the stack**
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+#### Option 2: Manual Docker Deployment
+
+If you prefer manual deployment:
+
+1. Build the Docker image:
+```bash
+docker build -t ernestodota2011/servicewatch:latest .
+```
+
+2. Run the container:
+```bash
+docker run -d -p 8080:80 --name servicewatch ernestodota2011/servicewatch:latest
+```
+
+3. Access the application at http://localhost:8080
+
+## Network Configuration
+
+The docker-compose.yml file is configured to use the `generalnet` external network. Make sure this network exists in your Docker environment or modify the configuration to use an available network.
+
+## Environment Configuration
+
+The application uses local storage for data persistence by default. For production use, you may want to configure persistent storage or connect it to a backend service.
+
+## License
+
+This project is released under the MIT License.
